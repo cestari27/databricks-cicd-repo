@@ -22,25 +22,23 @@
          python-version: '3.x'
 
      - name: Install Databricks CLI
-       run: |
-         pip install databricks-cli
+       run: pip install databricks-cli
 
-     - name: Configure Databricks CLI
+     - name: Configure Databricks via environment variables
        run: |
-        databricks configure --token <<EOF
-        ${{ secrets.DATABRICKS_HOST }}
-        ${{ secrets.DATABRICKS_TOKEN }}
-        EOF
-  
-     - name: Test Databricks API access
-       run: |
-        echo "Testing workspace access..."
-        databricks workspace ls / || echo "Workspace access failed"
+        echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST }}" >> $GITHUB_ENV
+        echo "DATABRICKS_TOKEN=${{ secrets.DATABRICKS_TOKEN }}" >> $GITHUB_ENV
 
-        echo "Testing DBFS access..."
-        databricks fs ls dbfs:/ || echo "DBFS access failed"
+     - name: Test access
+       run: databricks workspace ls /
 
      - name: Upload sample data to DBFS
        run: databricks fs cp sample_sales.csv dbfs:/FileStore/sample_sales.csv --overwrite
 
-   
+    
+     
+     
+     
+     
+     
+     
