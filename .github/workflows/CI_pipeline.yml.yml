@@ -31,9 +31,16 @@
         ${{ secrets.DATABRICKS_HOST }}
         ${{ secrets.DATABRICKS_TOKEN }}
         EOF
+  
+     - name: Test Databricks API access
+       run: |
+        echo "Testing workspace access..."
+        databricks workspace ls / || echo "Workspace access failed"
 
-     - name: Test Databricks connection
-       run: databricks workspace ls /
- 
+        echo "Testing DBFS access..."
+        databricks fs ls dbfs:/ || echo "DBFS access failed"
+
      - name: Upload sample data to DBFS
        run: databricks fs cp sample_sales.csv dbfs:/FileStore/sample_sales.csv --overwrite
+
+     - 
