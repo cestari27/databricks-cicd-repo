@@ -1,44 +1,59 @@
- name: CI Pipeline for Azure Databricks
+name: CI Pipeline for Azure Databricks
 
- on:
-   push:
-     branches:
-       - main
-   pull_request:
-     branches:
-       - main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
- jobs:
-   deploy:
-     runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-     steps:
-     - name: Checkout code
-       uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-     - name: Set up Python
-       uses: actions/setup-python@v4
-       with:
-         python-version: '3.x'
+      - name: Install Databricks CLI
+        run: pip install databricks-cli
 
-     - name: Install Databricks CLI
-       run: pip install databricks-cli
+      - name: Configure Databricks CLI
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          cat > ~/.databrickscfg <<EOF
+          [DEFAULT]
+          host = $DATABRICKS_HOST
+          token = $DATABRICKS_TOKEN
+          EOF
 
-     - name: Configure Databricks via environment variables
-       run: |
-        echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST }}" >> $GITHUB_ENV
-        echo "DATABRICKS_TOKEN=${{ secrets.DATABRICKS_TOKEN }}" >> $GITHUB_ENV
+      - name: Test connection
+        run: databricks workspace ls /
 
-     - name: Test access
-       run: databricks workspace ls /
+      - name: Upload sample data via API
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Encode file to base64
+          CONTENT=$(base64 -w 0 sample_sales.csv)
 
-     - name: Upload sample data to DBFS
-       run: databricks fs cp sample_sales.csv dbfs:/FileStore/sample_sales.csv --overwrite
+          # Upload via API
+          curl -X POST "${DATABRICKS_HOST}/api/2.0/dbfs/put" \
+            -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"path\": \"/FileStore/sample_sales.csv\",
+              \"contents\": \"${CONTENT}\",
+              \"overwrite\": true
+            }"
 
-    
-     
-     
-     
-     
-     
-     
+      - name: Verify upload
+        run: databricks fs ls dbfs:/FileStore/
