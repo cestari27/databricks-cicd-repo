@@ -28,32 +28,15 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          cat > ~/.databrickscfg <<EOF
-          [DEFAULT]
-          host = $DATABRICKS_HOST
-          token = $DATABRICKS_TOKEN
-          EOF
+          echo "[DEFAULT]" > ~/.databrickscfg
+          echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+          echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
+          chmod 600 ~/.databrickscfg
 
-      - name: Test connection
-        run: databricks workspace ls /
-
-      - name: Upload sample data via API
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      - name: Upload to Workspace instead of DBFS
         run: |
-          # Encode file to base64
-          CONTENT=$(base64 -w 0 sample_sales.csv)
-
-          # Upload via API
-          curl -X POST "${DATABRICKS_HOST}/api/2.0/dbfs/put" \
-            -H "Authorization: Bearer ${DATABRICKS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"path\": \"/FileStore/sample_sales.csv\",
-              \"contents\": \"${CONTENT}\",
-              \"overwrite\": true
-            }"
+          databricks workspace mkdirs /Shared/cicd-data || true
+          databricks workspace import sample_sales.csv /Shared/cicd-data/sample_sales.csv --language TEXT --overwrite
 
       - name: Verify upload
-        run: databricks fs ls dbfs:/FileStore/
+        run: databricks workspace ls /Shared/cicd-data/
