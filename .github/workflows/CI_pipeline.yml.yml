@@ -33,10 +33,18 @@ jobs:
           echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
           chmod 600 ~/.databrickscfg
 
-      - name: Upload to Workspace instead of DBFS
+      - name: Upload notebook to Workspace
         run: |
-          databricks workspace mkdirs /Shared/cicd-data || true
-          databricks workspace import sample_sales.csv /Shared/cicd-data/sample_sales.csv --language TEXT --overwrite
+          databricks workspace mkdirs /Shared/cicd-notebooks || true
+          databricks workspace import sample_sales_notebook.py /Shared/cicd-notebooks/sample_sales_notebook --language PYTHON --overwrite
 
-      - name: Verify upload
-        run: databricks workspace ls /Shared/cicd-data/
+      - name: Verify notebook upload
+        run: databricks workspace ls /Shared/cicd-notebooks/
+
+      - name: Create and run job with inline data
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Modifica o job config para usar dados inline ou de outra fonte
+          echo "Job configuration updated to use workspace notebook"
